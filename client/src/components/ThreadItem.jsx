@@ -39,6 +39,7 @@
 //   • Delete → a DELETE /api/threads/:id (204) followed by the row disappearing from the list.
 // ─────────────────────────────────────────────────────────────
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateThread, deleteThread } from "../services/threads.service";
 
 export default function ThreadItem({ thread }) {
@@ -48,17 +49,33 @@ export default function ThreadItem({ thread }) {
   // TODO: const queryClient = useQueryClient();
   // TODO: const editMutation = useMutation({ ... });
   // TODO: const deleteMutation = useMutation({ ... });
+  const queryClient = useQueryClient();
+
+const editMutation = useMutation({
+  mutationFn: ({ id, data }) => updateThread(id, data),
+  onSuccess: (updated, { id }) => {
+    queryClient.invalidateQueries({ queryKey: ["threads"] });
+    queryClient.invalidateQueries({ queryKey: ["thread", id] });
+    setEditing(false);
+  },
+});
+
+const deleteMutation = useMutation({
+  mutationFn: deleteThread,
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["threads"] });
+  },
+});
 
   function handleSave() {
-    // TODO: replace with editMutation.mutate({ id: thread.id, data: { title } })
-    console.log("save", thread.id, { title });
-    setEditing(false);
-  }
-
-  function handleDelete() {
-    // TODO: replace with deleteMutation.mutate(thread.id)
-    console.log("delete", thread.id);
-  }
+  editMutation.mutate({
+    id: thread.id,
+    data: { title },
+  });
+}
+ function handleDelete() {
+  deleteMutation.mutate(thread.id);
+}
 
   if (editing) {
     return (
@@ -70,9 +87,13 @@ export default function ThreadItem({ thread }) {
         />
         <div className="row">
           {/* TODO: disable while editMutation.isPending; label it "Saving…" */}
-          <button className="btn-primary" onClick={handleSave}>
-            Save
-          </button>
+<button
+  className="btn-primary"
+  onClick={handleSave}
+  disabled={editMutation.isPending}
+>
+  {editMutation.isPending ? "Saving…" : "Save"}
+</button>
           <button
             className="btn-ghost"
             onClick={() => {
@@ -96,9 +117,13 @@ export default function ThreadItem({ thread }) {
           Edit
         </button>
         {/* TODO: disable while deleteMutation.isPending; label it "Deleting…" */}
-        <button className="btn-danger" onClick={handleDelete}>
-          Delete
-        </button>
+        <button
+  className="btn-danger"
+  onClick={handleDelete}
+  disabled={deleteMutation.isPending}
+>
+  {deleteMutation.isPending ? "Deleting…" : "Delete"}
+</button>
       </div>
     </li>
   );
