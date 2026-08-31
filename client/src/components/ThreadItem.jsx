@@ -109,3 +109,10 @@ export default function ThreadItem({ thread }) {
     </li>
   );
 }
+
+const deleteMutation = useMutation({
+  mutationFn: deleteThread,
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["threads"] });
+  },
+});
