@@ -38,18 +38,18 @@
 //   • Save → a PUT /api/threads/:id (200) immediately followed by a GET /api/threads refetch.
 //   • Delete → a DELETE /api/threads/:id (204) followed by the row disappearing from the list.
 // ─────────────────────────────────────────────────────────────
-import { useState } from "react";
-import { updateThread, deleteThread } from "../services/threads.service";
+//import { useState } from "react";
+//import { updateThread, deleteThread } from "../services/threads.service";
 
-export default function ThreadItem({ thread }) {
-  const [title, setTitle] = useState(thread.title);
-  const [editing, setEditing] = useState(false);
+//export default function ThreadItem({ thread }) {
+ // const [title, setTitle] = useState(thread.title);
+  //const [editing, setEditing] = useState(false);
 
   // TODO: const queryClient = useQueryClient();
   // TODO: const editMutation = useMutation({ ... });
   // TODO: const deleteMutation = useMutation({ ... });
 
-  function handleSave() {
+  /*function handleSave() {
     // TODO: replace with editMutation.mutate({ id: thread.id, data: { title } })
     console.log("save", thread.id, { title });
     setEditing(false);
@@ -69,7 +69,7 @@ export default function ThreadItem({ thread }) {
           onChange={(e) => setTitle(e.target.value)}
         />
         <div className="row">
-          {/* TODO: disable while editMutation.isPending; label it "Saving…" */}
+          {/* TODO: disable while editMutation.isPending; label it "Saving…" *//*}
           <button className="btn-primary" onClick={handleSave}>
             Save
           </button>
@@ -95,9 +95,110 @@ export default function ThreadItem({ thread }) {
         <button className="btn-ghost" onClick={() => setEditing(true)}>
           Edit
         </button>
-        {/* TODO: disable while deleteMutation.isPending; label it "Deleting…" */}
+        {/* TODO: disable while deleteMutation.isPending; label it "Deleting…" *//*}
         <button className="btn-danger" onClick={handleDelete}>
           Delete
+        </button>
+      </div>
+    </li>
+  );
+}*/
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  updateThread,
+  deleteThread,
+} from "../services/threads.service";
+
+export default function ThreadItem({ thread }) {
+  const [title, setTitle] = useState(thread.title);
+  const [editing, setEditing] = useState(false);
+
+  const queryClient = useQueryClient();
+
+  // EDIT mutation
+  const editMutation = useMutation({
+    mutationFn: ({ id, data }) => updateThread(id, data),
+    onSuccess: (updated, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ["threads"] });
+      queryClient.invalidateQueries({ queryKey: ["thread", id] });
+      setEditing(false);
+    },
+  });
+
+  // DELETE mutation
+  const deleteMutation = useMutation({
+    mutationFn: deleteThread,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["threads"] });
+    },
+  });
+
+  function handleSave() {
+    editMutation.mutate({
+      id: thread.id,
+      data: { title },
+    });
+  }
+
+  function handleDelete() {
+    deleteMutation.mutate(thread.id);
+  }
+
+  if (editing) {
+    return (
+      <li className="card">
+        <input
+          className="edit-input"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
+
+        <div className="row">
+          <button
+            className="btn-primary"
+            onClick={handleSave}
+            disabled={editMutation.isPending}
+          >
+            {editMutation.isPending ? "Saving…" : "Save"}
+          </button>
+
+          <button
+            className="btn-ghost"
+            onClick={() => {
+              setTitle(thread.title);
+              setEditing(false);
+            }}
+            disabled={editMutation.isPending}
+          >
+            Cancel
+          </button>
+        </div>
+      </li>
+    );
+  }
+
+  return (
+    <li className="card">
+      <h3>{thread.title}</h3>
+
+      <p>{thread.body}</p>
+
+      <div className="row">
+        <button
+          className="btn-ghost"
+          onClick={() => setEditing(true)}
+          disabled={deleteMutation.isPending}
+        >
+          Edit
+        </button>
+
+        <button
+          className="btn-danger"
+          onClick={handleDelete}
+          disabled={deleteMutation.isPending}
+        >
+          {deleteMutation.isPending ? "Deleting…" : "Delete"}
         </button>
       </div>
     </li>
